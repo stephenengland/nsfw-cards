@@ -1,7 +1,15 @@
 var lazy = require("lazy"),
 	fs = require("fs"),
+	path = require('path'),
+	nconf = require('nconf'),
 	currentType,
 	stopUntilNextType = false;
+
+nconf.argv()
+.env()
+.file({file: path.join(__dirname, 'config.json')});
+
+var defaultFilename = path.join(__dirname, nconf.get('content:cahSqlFilename'));
 
 function getCurrentType (line) {
 	var nextType = 'black_cards';
@@ -17,6 +25,8 @@ function getCurrentType (line) {
 	if (currentType != 'white_cards' && line.indexOf('COPY ' + nextType) === 0) {
 		currentType = nextType;
 		stopUntilNextType = false;
+		//Return undefined so we don't parse this line
+		return undefined;
 	}
 	else if (stopUntilNextType || line.indexOf('\\.') === 0) {
 		stopUntilNextType = true;
@@ -26,6 +36,7 @@ function getCurrentType (line) {
 	return currentType;
 }
 
+//Hash
 function parseBlackCard (splitLine) {
 	return {
 		id: splitLine[0],
@@ -37,33 +48,37 @@ function parseBlackCard (splitLine) {
 	};
 }
 
+//Hash
 function parseCardSet (splitLine) {
 	return {
 		id: splitLine[0],
 		active: splitLine[1],
-		'base_deck': splitLine[2],
+		'base-deck': splitLine[2],
 		description: splitLine[3],
 		weight: splitLine[4],
 		'type': 'card_set'
 	};
 }
 
+//Sets for BlackCardIdsByCardSetId
 function parseCardSetBlackCard (splitLine) {
 	return {
-		'card_set_id': splitLine[0],
-		'black_card_id': splitLine[1],
+		'card-set-id': splitLine[0],
+		'black-card-id': splitLine[1],
 		'type': 'card_set_black_card'
 	};
 }
 
+//Sets for WhiteCardIdsByCardSetId
 function parseCardSetWhiteCard (splitLine) {
 	return {
-		'card_set_id': splitLine[0],
-		'white_card_id': splitLine[1],
+		'card-set-id': splitLine[0],
+		'white-card-id': splitLine[1],
 		'type': 'card_set_white_card'
 	};
 }
 
+//Hash
 function parseWhiteCards (splitLine) {
 	return {
 		'id': splitLine[0],
@@ -75,7 +90,11 @@ function parseWhiteCards (splitLine) {
 
 module.exports = function () {
 	return {
-		parseFile: function(filename, callback) {
+		parseFile: function(filename, callback, onEnd) {
+			if (!filename) {
+				filename = defaultFilename;
+			}
+			
 			new lazy(fs.createReadStream(filename))
 				.lines
 				.forEach(function(line) {
@@ -92,7 +111,8 @@ module.exports = function () {
 							case 'white_cards': callback(parseWhiteCards(splitLine)); break;
 						}
 					}
-				});
+				})
+				.on('pipe', onEnd);
 		}
 	};
 };
