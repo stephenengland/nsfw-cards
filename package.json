@@ -1,0 +1,25 @@
+{
+  "name": "nsfw-cards",
+  "version": "0.0.0",
+  "description": "A Cards Against Humanity Clone for Web",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thealah/nsfw-cards.git"
+  },
+  "author": "Stephen England",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/thealah/nsfw-cards/issues"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.2",
+    "grunt-contrib-jshint": "~0.8.0"
+  },
+  "dependencies": {
+    "lazy": "~1.0.11",
+    "nconf": "~0.6.9",
+    "path": "~0.4.9",
+    "async": "~0.2.10"
+  }
+}
