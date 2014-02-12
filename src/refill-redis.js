@@ -1,33 +1,32 @@
-var nconf = require('nconf'),
-	path = require('path'),
-	redis = require('redis'),
+var repo = require('./repository.js')(),
 	cahParser = require('./cahParser.js')();
 
-nconf.argv()
-.env()
-.file({file: path.join(__dirname, 'config.json')});
-
-var redisConfig = nconf.get('redis'),
-	redisClient = redis.createClient(redisConfig.port, redisConfig.host);
-
-redisClient.flushall();
+repo.deleteEverything();
 
 cahParser.parseFile(null, function (data) {
+	var addHash = function (repoFunction, data) {
+		var key = data.type + ':' + data.id;
+		delete data.type;
+		repoFunction(data);
+	};
 	switch (data.type) {
-		case 'black_cards':
-		case 'white_cards':
-		case 'card_set':
-			var key = data.type + data.id;
-			delete data.type;
-			redisClient.HMSET(key, data);
+		case 'black_cards': 
+			addHash(repo.black.add, data);
+		break;
+		case 'white_cards': 
+			addHash(repo.white.add, data);
+		break;
+		case 'card_set': 
+			addHash(repo.cardset.add, data);
 		break;
 		case 'card_set_black_card':
-			redisClient.sadd('black_cards_by_card_set:' + data['card-set-id'], data['black-card-id']);
+			repo.relations.cardset.black.add(data['black-card-id'], data['card-set-id']);
 		break;
 		case 'card_set_white_card':
-			redisClient.sadd('white_cards_by_card_set:' + data['card-set-id'], data['white-card-id']);
+			repo.relations.cardset.white.add(data['white-card-id'], data['card-set-id']);
 		break;
 	}
 }, function(){
-	redisClient.quit();
+	//Need to dispose after call stack is finished.
+	//repo.dispose();
 });
