@@ -4,7 +4,12 @@ module.exports = function () {
 			keys: [
 				"id",
 				"createdDate"
-			]
+			],
+			sort: {
+				byCreatedDate: function (a, b) {
+					return a.createdDate > b.createdDate ? -1 : a.createdDate < b.createdDate ? 1 : 0;
+				}
+			}
 		}
 	};
 };
