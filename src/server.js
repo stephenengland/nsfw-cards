@@ -5,7 +5,8 @@ var express = require('express'),
 	uuid = require('node-uuid'),
 	repo = require('./repository.js')(),
 	schema = require('./schema.js')(),
-	handlers = require('./responseHandlers.js')();
+	handlers = require('./responseHandlers.js')(),
+	listHelper = require('./listHelper.js');
 
 nconf
 .argv()
@@ -58,10 +59,10 @@ app.get('/api/game/list/take/:take/page/:page', function (req, res) {
 	var page = parseInt(req.route.params.page);
 	if (!take || take > 100) { take = 100; }
 	if (!page || page > 100) { page = 0; }
-	repo.game.getAll(
-		handlers.listWithGets(res, take, page, undefined, schema.game.sort.byCreatedDate, repo.game.get),
-		handlers.repoError(res)
-	);
+	repo.game.getAll(listHelper.listWithGets(take, page, undefined, schema.game.sort.byCreatedDate, repo.game.get, function(data) {
+		res.send(data);
+		res.end();
+	}), handlers.repoError(res));
 });
 
 app.get('/api/game/:id', function (req, res) {

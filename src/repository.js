@@ -59,7 +59,7 @@ module.exports = function() {
 					}
 				}
 			});
-		}
+		},
 		addRelation = function (typeOne, typeTwo, idOne, idTwo) {
 			redisClient.sadd(typeTwo + '_by_' + typeOne + ':' + idOne, idTwo);
 		},
