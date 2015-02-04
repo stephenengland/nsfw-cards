@@ -41,20 +41,70 @@ app.get('/api/set/:id', function (req, res) {
 	repo.cardset.get(req.route.params.id, handlers.data(res), handlers.repoError(res));
 });
 
-app.put('/api/game', function (req, res) {
-	var game = parseCleanRequest(schema.game.keys, req);
-	game.id = uuid.v4();
-	game.createdDate = new Date();
-	repo.game.add(game, function (result) {
-		repo.game.get(game.id, handlers.data(res), handlers.repoError(res));
-	}, handlers.repoError(res));
+app.post('/api/login/:token', function (req, res) {
+	repo.user.login(req.route.params.token, handlers.data(res, schema.user.insecureKeys), handlers.repoError(res));
 });
 
-app.get('/api/game/count/', function (req, res) {
+app.put('/api/login/:token', function (req, res) {
+	repo.user.login(req.route.params.token, handlers.data(res, schema.user.insecureKeys), handlers.repoError(res));
+});
+
+app.put('/api/:token/game', function (req, res) {
+	var game = parseCleanRequest(schema.game.keys, req);
+	var error = handlers.repoError(res);
+	repo.user.get(req.route.params.token, function (user) {
+		game.id = uuid.v4();
+		game.createdDate = new Date();
+		game.createdBy = user.id;
+		game.players = [{
+			userId: user.id,
+			playerId: uuid.v4()
+		}];
+		
+		var checkFinished = function() {
+			if (game.currentBlackCard && game.players[0].cards) {
+				handlers.data(res)(game);
+			}
+		};
+		
+		repo.game.add(game, function (result) {
+			repo.game.get(game.id, function (game) {
+				repo.game.decks.black.get(game, 1, function (blackCardId) {
+					repo.black.get(blackCardId[0], function(blackCard) {
+						game.currentBlackCard = blackCard;
+						checkFinished();
+					}, error);
+				}, error);
+				
+				repo.game.decks.white.get(game, 10, function (whiteCardIds) {
+					var whiteCards = [],
+						checkWhiteFinished = function () {
+							if (whiteCards.length === whiteCardIds.length ) {
+								game.players[0].cards = whiteCards;
+								checkFinished();
+							}
+						},
+						getPushWhiteCard = function(whiteCardId) {
+							repo.white.get(whiteCardId, function(whiteCard) {
+								whiteCards.push(whiteCard);
+								checkWhiteFinished();
+							}, error);
+						};
+						
+					for (var i=0; i<whiteCardIds.length; i++){
+						getPushWhiteCard(whiteCardIds[i]);
+					}
+				}, error);
+			}, error);
+		}, error);
+	}, error);
+});
+
+app.get('/api/:token/game/count/', function (req, res) {
 	repo.game.count(handlers.integer(res), handlers.repoError(res));
 });
 
-app.get('/api/game/list/take/:take/page/:page', function (req, res) {
+app.get('/api/:token/game/list/take/:take/page/:page', function (req, res) {
 	var take = parseInt(req.route.params.take);
 	var page = parseInt(req.route.params.page);
 	if (!take || take > 100) { take = 100; }
@@ -65,7 +115,7 @@ app.get('/api/game/list/take/:take/page/:page', function (req, res) {
 	}), handlers.repoError(res));
 });
 
-app.get('/api/game/:id', function (req, res) {
+app.get('/api/:token/game/:id', function (req, res) {
 	repo.game.get(req.route.params.id, handlers.data(res), handlers.repoError(res));
 });
 

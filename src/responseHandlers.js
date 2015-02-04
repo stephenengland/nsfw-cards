@@ -6,9 +6,14 @@ module.exports = function () {
 				res.end();
 			};
 		},
-		data: function (res) {
+		data: function (res, removeKeys) {
 			return function(data) {
 				if (data) {
+					if (removeKeys) {
+						removeKeys.forEach(function(key) {
+							delete data[key];
+						});
+					}
 					res.send(data);
 					res.end();
 				}
